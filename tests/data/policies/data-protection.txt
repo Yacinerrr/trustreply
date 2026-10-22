@@ -1,0 +1,7 @@
+Data Protection Policy
+
+Customer data is encrypted in transit using TLS 1.2 or higher.
+
+Customer data at rest is encrypted using AES-256 on all managed databases and storage buckets.
+
+Backups run daily and are retained for 30 days. Restore tests are performed twice a year.
