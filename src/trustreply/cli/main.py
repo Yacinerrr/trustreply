@@ -8,7 +8,7 @@ from typing import Annotated
 import typer
 
 from trustreply import __version__
-from trustreply.core import ingest_path, parse_questionnaire
+from trustreply.core import PolicyIndex, ingest_path, parse_questionnaire
 
 app = typer.Typer(help="Answer security questionnaires with cited evidence.", no_args_is_help=True)
 
@@ -69,3 +69,25 @@ def questions(
         typer.echo("No answer column found; answers will go in a new column.")
     for question in result.questions[:show]:
         typer.echo(f"- {question.id} -> {question.answer_cell}: {question.text[:80]}")
+
+
+@app.command()
+def search(
+    policies: Annotated[Path, typer.Argument(help="A policy file or a folder of policies.")],
+    question: Annotated[str, typer.Argument(help="The question to find evidence for.")],
+    top: Annotated[int, typer.Option(help="How many matches to show.")] = 3,
+) -> None:
+    """Show which policy passages best match a question (the evidence the AI will see)."""
+    try:
+        index = PolicyIndex(ingest_path(policies))
+    except (FileNotFoundError, ValueError) as error:
+        typer.secho(str(error), fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from error
+
+    hits = index.search(question, top_k=top)
+    if not hits:
+        typer.echo("No evidence found in the policies. This would be flagged as a gap.")
+        return
+    for hit in hits:
+        preview = hit.chunk.text.replace("\n", " ")[:140]
+        typer.echo(f"- {hit.score:.2f} [{hit.chunk.citation}] {preview}")
