@@ -2,7 +2,7 @@
 
 from trustreply.core.drafting import draft_answer
 from trustreply.core.ingest import ingest_path
-from trustreply.core.llm import AnthropicClient, LLMClient, LLMError, get_client
+from trustreply.core.llm import AnthropicClient, GroqClient, LLMClient, LLMError, get_client
 from trustreply.core.models import Answer, Chunk, Question, Questionnaire
 from trustreply.core.questionnaire import parse_questionnaire
 from trustreply.core.retrieval import Hit, PolicyIndex
@@ -11,6 +11,7 @@ __all__ = [
     "Answer",
     "AnthropicClient",
     "Chunk",
+    "GroqClient",
     "Hit",
     "LLMClient",
     "LLMError",
