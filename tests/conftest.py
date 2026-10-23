@@ -70,3 +70,38 @@ def docx_file(tmp_path: Path) -> Path:
     doc.add_paragraph("Vendor access is removed when a contract ends.")
     doc.save(str(path))
     return path
+
+
+@pytest.fixture
+def questionnaire_xlsx(tmp_path: Path) -> Path:
+    """A messy but realistic sheet: title rows, header on row 3, extra columns."""
+    from openpyxl import Workbook
+
+    path = tmp_path / "acme-security-review.xlsx"
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Security"
+    ws["A1"] = "ACME Corp vendor security assessment"
+    ws.append([])
+    ws.append(["Ref", "Question", "Response", "Comments"])
+    ws.append(["AC-1", "Do you enforce multi-factor authentication for all employees?", None, None])
+    ws.append(["AC-2", "How often are user access rights reviewed?", None, None])
+    ws.append([None, None, None, None])
+    ws.append(["DP-1", "Is customer data encrypted at rest?", None, None])
+    ws.append(["DP-2", "ok", None, None])  # too short to be a question
+    other = wb.create_sheet("Cover")
+    other["A1"] = "Please complete the Security tab."
+    wb.save(str(path))
+    return path
+
+
+@pytest.fixture
+def questionnaire_no_answer_col(tmp_path: Path) -> Path:
+    path = tmp_path / "simple.csv"
+    path.write_text(
+        "Control,Notes\n"
+        "Do you have an incident response plan?,internal\n"
+        "Do you perform annual penetration tests?,internal\n",
+        encoding="utf-8",
+    )
+    return path
