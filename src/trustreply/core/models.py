@@ -52,6 +52,7 @@ class Questionnaire(BaseModel):
 
 Verdict = Literal["yes", "no", "partial", "not_applicable", "gap"]
 Confidence = Literal["high", "medium", "low"]
+Verification = Literal["supported", "weak", "unsupported", "unchecked"]
 
 
 class Answer(BaseModel):
@@ -62,6 +63,7 @@ class Answer(BaseModel):
     explanation: str
     evidence: list[Chunk] = []  # the policy passages that back the answer
     confidence: Confidence = "low"
+    verification: Verification = "unchecked"  # did a second check confirm the citations?
     note: str | None = None  # why this is a gap, or other reviewer-facing remarks
 
     @property

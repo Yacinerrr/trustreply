@@ -15,6 +15,7 @@ from trustreply.core import (
     get_client,
     ingest_path,
     parse_questionnaire,
+    verify_answer,
 )
 from trustreply.core.models import Question
 
@@ -106,6 +107,13 @@ def draft(
     policies: Annotated[Path, typer.Argument(help="A policy file or a folder of policies.")],
     question: Annotated[str, typer.Argument(help="The question to answer.")],
     top: Annotated[int, typer.Option(help="How many policy passages the model may see.")] = 5,
+    verify: Annotated[
+        bool,
+        typer.Option(
+            "--verify/--no-verify",
+            help="Check the cited passages really support the answer (one extra model call).",
+        ),
+    ] = True,
 ) -> None:
     """Draft a cited answer to one question (the model sees only matching policy passages)."""
     try:
@@ -125,6 +133,8 @@ def draft(
     item = Question(id="Q", text=question, row=1, question_col="A", answer_col="B")
     try:
         answer = draft_answer(item, hits, client)  # type: ignore[arg-type]
+        if verify and client is not None:
+            answer = verify_answer(item, answer, client)
     except LLMError as error:
         typer.secho(str(error), fg=typer.colors.RED, err=True)
         raise typer.Exit(code=1) from error
@@ -141,4 +151,7 @@ def draft(
     typer.echo(answer.explanation)
     for chunk in answer.evidence:
         typer.echo(f"  source: {chunk.citation}")
+    typer.echo(f"Citation check: {answer.verification}")
+    if answer.note:
+        typer.echo(f"Note: {answer.note}")
     typer.echo("Draft only: a person must review this before it is sent.")
