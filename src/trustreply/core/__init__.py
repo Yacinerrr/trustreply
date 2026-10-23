@@ -6,6 +6,7 @@ from trustreply.core.llm import AnthropicClient, GroqClient, LLMClient, LLMError
 from trustreply.core.models import Answer, Chunk, Question, Questionnaire
 from trustreply.core.questionnaire import parse_questionnaire
 from trustreply.core.retrieval import Hit, PolicyIndex
+from trustreply.core.verification import verify_answer
 
 __all__ = [
     "Answer",
@@ -22,4 +23,5 @@ __all__ = [
     "get_client",
     "ingest_path",
     "parse_questionnaire",
+    "verify_answer",
 ]

@@ -150,9 +150,12 @@ def test_env_file_loading(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> No
 
 def test_cli_draft_answer(policies_dir: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(cli_main, "get_client", lambda: FakeClient(reply()))
-    result = CliRunner().invoke(cli_main.app, ["draft", str(policies_dir), "Do you enforce MFA?"])
+    result = CliRunner().invoke(
+        cli_main.app, ["draft", str(policies_dir), "Do you enforce MFA?", "--no-verify"]
+    )
     assert result.exit_code == 0
     assert "YES (confidence: high)" in result.stdout
+    assert "Citation check: unchecked" in result.stdout
     assert "source: access-control-policy.md" in result.stdout
     assert "review" in result.stdout
 

@@ -53,21 +53,23 @@ class _ModelReply(BaseModel):
     confidence: str = "low"
 
 
-def build_prompt(question: Question, chunks: list[Chunk]) -> str:
-    """Lay out the question and numbered excerpts. Excerpt text cannot close its own tag."""
+def render_excerpts(chunks: list[Chunk]) -> str:
+    """Number the excerpts E1, E2... Excerpt text cannot close its own tag."""
     excerpts = []
     for number, chunk in enumerate(chunks, start=1):
         safe_text = chunk.text.replace("</excerpt", "<\\/excerpt")
         excerpts.append(
             f'<excerpt id="E{number}" source="{chunk.citation}">\n{safe_text}\n</excerpt>'
         )
-    return (
-        f"<question>\n{question.text}\n</question>\n\n"
-        f"<excerpts>\n{chr(10).join(excerpts)}\n</excerpts>"
-    )
+    return f"<excerpts>\n{chr(10).join(excerpts)}\n</excerpts>"
 
 
-def _extract_json(text: str) -> dict | None:
+def build_prompt(question: Question, chunks: list[Chunk]) -> str:
+    """Lay out the question and the numbered excerpts."""
+    return f"<question>\n{question.text}\n</question>\n\n{render_excerpts(chunks)}"
+
+
+def extract_json(text: str) -> dict | None:
     """Pull the JSON object out of the reply, tolerating code fences and stray prose."""
     text = re.sub(r"```(?:json)?", "", text)
     start, end = text.find("{"), text.rfind("}")
@@ -99,7 +101,7 @@ def draft_answer(question: Question, hits: list[Hit], client: LLMClient) -> Answ
     chunks = [hit.chunk for hit in hits]
     raw = client.complete(SYSTEM_PROMPT, build_prompt(question, chunks))
 
-    data = _extract_json(raw)
+    data = extract_json(raw)
     if data is None:
         return _gap(question, "The model's reply could not be read. Please answer manually.")
     try:
