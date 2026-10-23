@@ -118,7 +118,8 @@ def draft(
 
     if hits:
         typer.echo(
-            f"Sending the question and {len(hits)} matching policy passage(s) to the model...",
+            f"Sending the question and {len(hits)} matching policy passage(s) to "
+            f"{getattr(client, 'provider', 'the AI model')}...",
             err=True,
         )
     item = Question(id="Q", text=question, row=1, question_col="A", answer_col="B")
