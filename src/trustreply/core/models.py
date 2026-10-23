@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel
 
 
@@ -46,3 +48,27 @@ class Questionnaire(BaseModel):
     source: str  # file name
     questions: list[Question]
     answer_column_exists: bool  # False when the file had no answer column and we picked one
+
+
+Verdict = Literal["yes", "no", "partial", "not_applicable", "gap"]
+Confidence = Literal["high", "medium", "low"]
+
+
+class Answer(BaseModel):
+    """A drafted answer to one question. Never final: a person reviews it before export."""
+
+    question_id: str
+    verdict: Verdict  # "gap" means we could not honestly answer from the policies
+    explanation: str
+    evidence: list[Chunk] = []  # the policy passages that back the answer
+    confidence: Confidence = "low"
+    note: str | None = None  # why this is a gap, or other reviewer-facing remarks
+
+    @property
+    def citations(self) -> list[str]:
+        """Human-readable citations for the evidence, e.g. ['policy.md, section Access']."""
+        return [chunk.citation for chunk in self.evidence]
+
+    @property
+    def is_gap(self) -> bool:
+        return self.verdict == "gap"
