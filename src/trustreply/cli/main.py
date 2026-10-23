@@ -8,7 +8,15 @@ from typing import Annotated
 import typer
 
 from trustreply import __version__
-from trustreply.core import PolicyIndex, ingest_path, parse_questionnaire
+from trustreply.core import (
+    LLMError,
+    PolicyIndex,
+    draft_answer,
+    get_client,
+    ingest_path,
+    parse_questionnaire,
+)
+from trustreply.core.models import Question
 
 app = typer.Typer(help="Answer security questionnaires with cited evidence.", no_args_is_help=True)
 
@@ -91,3 +99,45 @@ def search(
     for hit in hits:
         preview = hit.chunk.text.replace("\n", " ")[:140]
         typer.echo(f"- {hit.score:.2f} [{hit.chunk.citation}] {preview}")
+
+
+@app.command()
+def draft(
+    policies: Annotated[Path, typer.Argument(help="A policy file or a folder of policies.")],
+    question: Annotated[str, typer.Argument(help="The question to answer.")],
+    top: Annotated[int, typer.Option(help="How many policy passages the model may see.")] = 5,
+) -> None:
+    """Draft a cited answer to one question (the model sees only matching policy passages)."""
+    try:
+        index = PolicyIndex(ingest_path(policies))
+        hits = index.search(question, top_k=top)
+        client = get_client() if hits else None
+    except (FileNotFoundError, ValueError, LLMError) as error:
+        typer.secho(str(error), fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from error
+
+    if hits:
+        typer.echo(
+            f"Sending the question and {len(hits)} matching policy passage(s) to the model...",
+            err=True,
+        )
+    item = Question(id="Q", text=question, row=1, question_col="A", answer_col="B")
+    try:
+        answer = draft_answer(item, hits, client)  # type: ignore[arg-type]
+    except LLMError as error:
+        typer.secho(str(error), fg=typer.colors.RED, err=True)
+        raise typer.Exit(code=1) from error
+
+    if answer.is_gap:
+        typer.secho("GAP - needs a human answer", fg=typer.colors.YELLOW, bold=True)
+        typer.echo(answer.note or "")
+        return
+    typer.secho(
+        f"{answer.verdict.upper()} (confidence: {answer.confidence})",
+        fg=typer.colors.GREEN,
+        bold=True,
+    )
+    typer.echo(answer.explanation)
+    for chunk in answer.evidence:
+        typer.echo(f"  source: {chunk.citation}")
+    typer.echo("Draft only: a person must review this before it is sent.")
